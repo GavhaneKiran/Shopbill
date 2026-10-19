@@ -215,6 +215,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 #picker{max-height:26rem;align-items:start}
 .pick.on{grid-template-areas:"i n" "i p" "s s";cursor:default;background:var(--accent-soft);border-color:var(--accent)}
 .pick.on:hover{transform:none;box-shadow:none}
+.pick.zero{grid-template-areas:"i n" "i p" "s s";cursor:default}
+.pick.zero:hover{transform:none;box-shadow:none}
 .pstep{grid-area:s;display:flex;gap:.3rem;margin-top:.55rem}
 .pstep button{flex:0 0 2.5rem;min-height:2.5rem;border:1px solid var(--line);background:var(--surface);border-radius:.55rem;font-weight:700;font-size:1.15rem;line-height:1;cursor:pointer}
 .pstep button:last-child{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
@@ -301,6 +303,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
   <div class="inv-grid">
     <div class="col-build">
 
+      <section class="panel" id="billInfo">
+        <div class="fields">
+          <label>Bill no.<input id="d-no" autocomplete="off"></label>
+          <label>Date and time (automatic)<input id="d-date" readonly tabindex="-1"></label>
+        </div>
+      </section>
+
       <section class="panel" id="custPanel">
         <div class="panel-head">
           <h2>Bill to</h2>
@@ -321,21 +330,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
         <div id="custPicker" class="picker"></div>
       </section>
 
-      <section class="panel">
-        <div class="panel-head">
-          <h2>Pick items</h2>
-          <input type="search" id="pick-q" placeholder="Search items" aria-label="Search items">
-        </div>
-        <div id="picker" class="picker"></div>
-      </section>
-
-      <section class="panel">
-        <h2>Bill</h2>
-        <div class="fields" style="margin-bottom:.9rem">
-          <label>Bill no.<input id="d-no" autocomplete="off"></label>
-          <label>Date and time (automatic)<input id="d-date" readonly tabindex="-1"></label>
-        </div>
-        <div id="lines"></div>
+      <section class="panel" id="billActions">
         <div class="sum" id="sum"></div>
         <div class="actions">
           <button class="btn primary" data-act="print">Print to printer</button>
@@ -345,6 +340,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
         </div>
         <p class="hint">To keep a copy of the bill as a file, choose "Save as PDF" in the print window.</p>
       </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Pick items</h2>
+          <input type="search" id="pick-q" placeholder="Search items" aria-label="Search items">
+        </div>
+        <div id="picker" class="picker"></div>
+      </section>
+
+      <div id="lines" hidden></div>
     </div>
 
     <aside class="col-preview" aria-label="Invoice preview">
@@ -708,9 +713,8 @@ function renderPicker(){
   var list=S.items.filter(function(i){return !q||i.name.toLowerCase().indexOf(q)>-1});
   var inBill={};S.draft.lines.forEach(function(l){inBill[l.itemId]=(inBill[l.itemId]||0)+num(l.qty)});
   box.innerHTML=list.length?list.map(function(it){
-    var n=inBill[it.id];
-    if(!n)return '<button type="button" class="pick" data-act="add" data-id="'+it.id+'">'+thumb(it,'pimg')+'<span class="pn">'+esc(it.name)+'</span><span class="pp">₹ '+money(it.price)+esc(stockTag(it))+'</span></button>';
-    return '<div class="pick on">'+thumb(it,'pimg')+'<span class="pn">'+esc(it.name)+'</span><span class="pp">₹ '+money(it.price)+esc(stockTag(it))+'</span>'+
+    var n=inBill[it.id]||0;
+    return '<div class="pick '+(n?'on':'zero')+'">'+thumb(it,'pimg')+'<span class="pn">'+esc(it.name)+'</span><span class="pp">₹ '+money(it.price)+esc(stockTag(it))+'</span>'+
       '<div class="pstep"><button type="button" data-act="pdec" data-id="'+it.id+'" aria-label="Less '+esc(it.name)+'">−</button><input data-pq="'+it.id+'" type="number" inputmode="decimal" min="0" step="any" value="'+esc(r2(n))+'" aria-label="Quantity of '+esc(it.name)+'"><button type="button" data-act="pinc" data-id="'+it.id+'" aria-label="More '+esc(it.name)+'">+</button></div></div>';
   }).join(''):'<p class="empty">'+(S.items.length?'No item matches that search.':'No items yet. Add your items in the Items tab.')+'</p>';
   box.scrollTop=st;
@@ -1127,7 +1131,7 @@ document.addEventListener('click',function(e){
   if(act==='add')addToBill(id);
   else if(act==='pinc'||act==='pdec'){
     var k=S.draft.lines.map(function(x){return x.itemId}).indexOf(id);
-    if(k<0)return;
+    if(k<0){if(act==='pinc')addToBill(id);return}
     var nq=num(S.draft.lines[k].qty)+(act==='pinc'?1:-1);
     if(nq<1)S.draft.lines.splice(k,1);else S.draft.lines[k].qty=nq;
     saveDraft();renderLines();renderPicker();refresh();
@@ -1234,6 +1238,7 @@ document.addEventListener('input',function(e){
     var k2=S.draft.lines.map(function(x){return x.itemId}).indexOf(t.dataset.pq);
     var v=num(t.value);
     if(k2>-1&&v>0){S.draft.lines[k2].qty=v;saveDraft();renderLines();refresh()}
+    else if(k2<0&&v>0){var it2=S.items.filter(function(x){return x.id===t.dataset.pq})[0];if(it2){var ln2=lineFrom(it2);ln2.qty=v;S.draft.lines.push(ln2);saveDraft();renderLines();refresh();warnStock(it2.id)}}
     return;
   }
   if(t.dataset.f){
