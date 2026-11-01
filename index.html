@@ -306,9 +306,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
       <section class="panel" id="billInfo">
         <div class="fields">
           <label>Bill no.<input id="d-no" autocomplete="off"></label>
-          <label>Date and time (automatic)<input id="d-date" readonly tabindex="-1"></label>
+                    <label>Date and time (automatic)<input id="d-date" readonly tabindex="-1"></label>
+        </div>
+        <div class="actions">
+          <button class="btn" data-act="new">New invoice</button>
         </div>
       </section>
+          
+          <!-- <label>Date and time (automatic)<input id="d-date" readonly tabindex="-1"></label>
+        </div>
+      </section> -->
 
       <section class="panel" id="custPanel">
         <div class="panel-head">
@@ -330,16 +337,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
         <div id="custPicker" class="picker"></div>
       </section>
 
-      <section class="panel" id="billActions">
-        <div class="sum" id="sum"></div>
-        <div class="actions">
-          <button class="btn primary" data-act="print">Print to printer</button>
-          <button class="btn" data-act="pdf">Print / Save PDF</button>
-          <button class="btn" data-act="save">Save</button>
-          <button class="btn" data-act="new">New invoice</button>
-        </div>
-        <p class="hint">To keep a copy of the bill as a file, choose "Save as PDF" in the print window.</p>
-      </section>
+ 
 
       <section class="panel">
         <div class="panel-head">
@@ -347,6 +345,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
           <input type="search" id="pick-q" placeholder="Search items" aria-label="Search items">
         </div>
         <div id="picker" class="picker"></div>
+      </section>
+
+      <section class="panel" id="billActions">
+        <div class="sum" id="sum"></div>
+        <div class="actions">
+          <button class="btn primary" data-act="print">Print to printer</button>
+          <button class="btn" data-act="pdf">Print / Save PDF</button>
+          <button class="btn" data-act="save">Save</button>
+        </div>
+        <p class="hint">To keep a copy of the bill as a file, choose "Save as PDF" in the print window.</p>
       </section>
 
       <div id="lines" hidden></div>
@@ -1350,9 +1358,12 @@ function gdCall(payload){
     .then(function(t){try{return JSON.parse(t)}catch(e){throw new Error('badreply')}});
 }
 function gdApply(r){
+  var keepLocalC=false;
   gdApplying=true;
   try{
-    S.items=Array.isArray(r.items)?r.items:[];S.customers=Array.isArray(r.customers)?r.customers:[];
+    var rc=Array.isArray(r.customers)?r.customers:[];
+    keepLocalC=!rc.length&&S.customers.length>0;
+    S.items=Array.isArray(r.items)?r.items:[];S.customers=keepLocalC?S.customers:rc;
     S.seeded=false;
     save('items',S.items);save('customers',S.customers);save('seeded',false);
   }finally{gdApplying=false}
@@ -1360,6 +1371,7 @@ function gdApply(r){
   if(S.draft.cust&&S.draft.cust.id&&!S.customers.some(function(c){return c.id===S.draft.cust.id}))S.draft.cust={id:'',name:'',phone:'',addr:''};
   saveDraft();
   GD.rev=r.rev;GD.dirty=false;gdSave();
+  if(keepLocalC)gdMark();
   updateBanners();fullInvoiceRender();renderItems();renderCustomers();renderStock();
 }
 function gdPush(base,allowEmpty){
