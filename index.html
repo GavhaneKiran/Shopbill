@@ -120,8 +120,9 @@ input[type=number]{font-variant-numeric:tabular-nums}
 
 /* The receipt, laid out like the shop's existing paper bill. Always black on white paper in both themes. */
 .sheet{background:var(--paper);color:var(--paper-ink);font:12.5px/1.5 var(--sheetfont);padding:12px 12px 18px;box-shadow:0 1px 8px rgba(0,0,0,.18)}
-.sheet.fmt-receipt{width:72mm;max-width:100%}
-.sheet.fmt-a4{width:100%;max-width:190mm;font-size:14px;padding:16px 18px 24px}
+.sheet.fmt-80{width:72mm;max-width:100%}
+.sheet.fmt-58{width:48mm;max-width:100%;font-size:11px;padding:10px 8px 16px}
+.sheet.fmt-58 .r{grid-template-columns:minmax(0,1fr) 2ch 5ch 6ch;gap:0 4px}
 .sheet .c{text-align:center}
 .sheet .shopname{font-weight:700;font-size:1.25em}
 .sheet hr{border:0;border-top:1px solid #111;margin:7px 0}
@@ -204,7 +205,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .preview-scroll{border-radius:1rem;background:linear-gradient(180deg,var(--surface2),color-mix(in srgb,var(--surface2) 80%,var(--bg)))}
 #sheetPreview{filter:drop-shadow(0 8px 12px rgba(0,0,0,.22))}
 #sheetPreview .sheet{box-shadow:none}
-#sheetPreview .sheet.fmt-receipt{padding-bottom:26px;-webkit-mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/12px 100%;mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/12px 100%}
+#sheetPreview .sheet.fmt-80,#sheetPreview .sheet.fmt-58{padding-bottom:26px;-webkit-mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/12px 100%;mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/12px 100%}
 
 .tab:not([hidden]){animation:rise .28s ease both}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -364,8 +365,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
       <div class="preview-bar">
         <h2>Preview</h2>
         <div class="seg" role="group" aria-label="Paper size">
-          <button data-fmt="receipt" aria-pressed="true">Receipt 80mm</button>
-          <button data-fmt="a4" aria-pressed="false">A4</button>
+          <button data-fmt="80" aria-pressed="true">80mm</button>
+          <button data-fmt="58" aria-pressed="false">58mm</button>
         </div>
       </div>
       <div class="preview-scroll"><div id="sheetPreview"></div></div>
@@ -488,7 +489,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
       <label>Bill number prefix (optional)<input data-s="prefix" autocomplete="off"></label>
       <label>Next bill number<input data-s="next" type="number" min="1" step="1"></label>
       <label>Low stock warning at or below<input data-s="low" type="number" min="0" step="any" placeholder="5"></label>
-      <label>Printer paper<select data-s="pw"><option value="576">3 inch / 80mm</option><option value="384">2 inch / 58mm</option></select></label>
     </div>
   </section>
   <section class="panel" id="gdPanel">
@@ -567,7 +567,7 @@ function toast(msg){var t=$('#toast');t.textContent=msg;t.hidden=false;clearTime
 var S={shop:load('shop',null),items:load('items',null),customers:load('customers',null),history:load('history',[]),stockLog:load('stocklog',[]),draft:load('draft',null),seeded:load('seeded',false),lastBackup:load('lastbackup',0),since:load('since',0),editing:null,editingC:null,photo:null};
 
 function seed(){
-  S.shop={name:'',addr:'',phone:'',footer:'',prefix:'',next:2772,fmt:'receipt'};
+  S.shop={name:'',addr:'',phone:'',footer:'',prefix:'',next:2772,fmt:'80'};
   S.items=[];
   S.customers=[];
   S.seeded=false;
@@ -655,7 +655,7 @@ function calc(inv){
 /* ---------- invoice sheet ---------- */
 function sheetHTML(inv){
   var sh=S.shop,c=calc(inv),cu=inv.cust||{};
-  var h='<div class="sheet fmt-'+(sh.fmt==='a4'?'a4':'receipt')+'">';
+  var h='<div class="sheet fmt-'+(sh.fmt==='58'?'58':'80')+'">';
   if(sh.name||sh.addr||sh.phone){
     if(sh.name)h+='<div class="c shopname">'+esc(sh.name)+'</div>';
     if(sh.addr)h+='<div class="c">'+nl(sh.addr)+'</div>';
@@ -693,8 +693,9 @@ function refresh(){
   applyPageStyle();
 }
 function applyPageStyle(){
-  $('#pageStyle').textContent=S.shop.fmt==='a4'?'@page{size:A4;margin:12mm}':'@page{size:80mm auto;margin:3mm}';
-  $$('[data-fmt]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.fmt===(S.shop.fmt==='a4'?'a4':'receipt')))});
+  var is58=S.shop.fmt==='58';
+  $('#pageStyle').textContent=is58?'@page{size:58mm auto;margin:3mm}':'@page{size:80mm auto;margin:3mm}';
+  $$('[data-fmt]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.fmt===(is58?'58':'80')))});
 }
 
 /* ---------- invoice tab ---------- */
@@ -893,7 +894,7 @@ function stockList(onlyLow){
 }
 function stockHTML(onlyLow){
   var sh=S.shop,list=stockList(onlyLow),flag=false;
-  var h='<div class="sheet fmt-'+(sh.fmt==='a4'?'a4':'receipt')+'">';
+  var h='<div class="sheet fmt-'+(sh.fmt==='58'?'58':'80')+'">';
   if(sh.name)h+='<div class="c shopname">'+esc(sh.name)+'</div>';
   h+='<div class="c"><b>'+(onlyLow?'Low Stock List':'Stock List')+'</b></div><div class="c">'+esc(fmtDT(nowLocal()))+'</div><hr>';
   h+='<div class="r2 h"><span>Item Name</span><span>Stock</span></div><hr>';
@@ -1131,7 +1132,7 @@ function armed(btn,label){
 /* ---------- events ---------- */
 document.addEventListener('click',function(e){
   var tabBtn=e.target.closest('[data-tab]');if(tabBtn){switchTab(tabBtn.dataset.tab);return}
-  var fm=e.target.closest('[data-fmt]');if(fm){S.shop.fmt=fm.dataset.fmt;save('shop',S.shop);refresh();return}
+  var fm=e.target.closest('[data-fmt]');if(fm){S.shop.fmt=fm.dataset.fmt;S.shop.pw=fm.dataset.fmt==='58'?'384':'576';save('shop',S.shop);refresh();return}
   var b=e.target.closest('[data-act]');if(!b)return;
   var act=b.dataset.act,id=b.dataset.id;
   var lineEl=b.closest('.line'),i=lineEl?parseInt(lineEl.dataset.i,10):-1;
@@ -1276,7 +1277,7 @@ document.addEventListener('change',function(e){
       try{
         var d=JSON.parse(fr.result);
         if(!d||!d.shop||!Array.isArray(d.items)||!Array.isArray(d.history))throw new Error('bad');
-        S.shop=d.shop;S.items=d.items;S.customers=Array.isArray(d.customers)?d.customers:[];S.history=d.history;S.seeded=false;
+        S.shop=d.shop;if(S.shop.fmt!=='58')S.shop.fmt='80';S.shop.pw=S.shop.fmt==='58'?'384':'576';S.items=d.items;S.customers=Array.isArray(d.customers)?d.customers:[];S.history=d.history;S.seeded=false;
         S.stockLog=Array.isArray(d.stockLog)?d.stockLog:[];save('stocklog',S.stockLog);
         S.draft=newDraft();
         save('shop',S.shop);save('items',S.items);save('customers',S.customers);save('history',S.history);save('seeded',false);saveDraft();
@@ -1434,8 +1435,8 @@ function gdInit(){
 if(!S.shop||!S.items||!S.customers)seed();
 if(!S.since){S.since=Date.now();save('since',S.since)}
 if(!S.draft)S.draft=newDraft();
-if(!S.shop.fmt)S.shop.fmt='receipt';
-if(!S.shop.pw)S.shop.pw='576';
+if(S.shop.fmt!=='58'&&S.shop.fmt!=='80')S.shop.fmt=(String(S.shop.pw)==='384')?'58':'80';
+S.shop.pw=S.shop.fmt==='58'?'384':'576';
 stampNow(S.draft);
 fillShopInputs();updateBanners();fullInvoiceRender();
 renderBackupNote();askPersist();gdInit();
